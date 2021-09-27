@@ -1,0 +1,64 @@
+laravel new multi-user-login
+composer require laravel/ui
+
+php artisan ui bootstrap --auth
+npm install && npm run dev
+
+create database
+php artisan migrate
+
+php artisan make:middleware IsAdmin
+
+Register the middleware in kernel.php
+
+'is_admin' => \App\Http\Middleware\IsAdmin::class,
+
+Add this to middleware IsAdmin.php
+
+public function handle(Request $request, Closure $next)
+    {
+        if(auth()->user()->is_admin == 1) {
+            return $next($request);
+        }
+        return redirect('home')->with('error', 'You have no admin access.');
+    }
+
+HomeController.php
+
+public function index()
+    {
+        return view('home');
+    }
+
+    public function adminHome(){
+        return view('admin-home');
+    }
+
+in route/web.php
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::get('admin/home', [App\Http\Controllers\HomeController::class, 'adminHome'])->name('admin.home')->middleware('is_admin');
+
+next is LoginController.php write Login method
+
+use Illuminate\Http\Request;
+
+public function login(Request $request){
+    $input = $request->all();
+    
+    $this->validate($request, [
+        'email' => 'required|email',
+        'password' => 'required'
+    ]);
+
+    if(auth()->attempt(array('email' => $input['email'], 'password' => $input['password']))){
+        if(auth()->user()->is_admin == 1){
+            return redirect()->route('admin.home');
+        }
+        return redirect('home');
+    }
+    return redirect()->route('login')->with('error', 'Invalid Credential!');
+}
+
+Install Toastr
+composer require brian2694/laravel-toastr
+
